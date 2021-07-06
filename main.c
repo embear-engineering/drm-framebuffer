@@ -302,7 +302,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name)
 
     err = drmModeSetCrtc(fd, encoder->crtc_id, frame_buffer_id, 0, 0, &connector->connector_id, 1, resolution);
     if (err) {
-        printf("Could not set new framebuffer for CRTC\n");
+        printf("Could not set new framebuffer for CRTC (err %d)\n", err);
         goto free_crtc;
     }
 
@@ -324,6 +324,9 @@ int get_framebuffer(const char *dri_device, const char *connector_name)
     }
 
     memset(framebuffer, 0, dumb_framebuffer.size);
+
+    /* Make sure we are not master anymore, so that other processes can add new framebuffers as well */
+    drmDropMaster(fd);
 
     size_t total_read = 0;
     while (total_read < dumb_framebuffer.size)
