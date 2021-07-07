@@ -2,7 +2,7 @@ CC      ?= gcc
 CFLAGS  ?= -pedantic -Wall -I /usr/include/drm
 LDFLAGS ?= -ldrm
 
-OBJ = main.o
+OBJ = main.o framebuffer.o
 PROGNAME = drm-framebuffer
 
 exec_prefix ?= /usr
