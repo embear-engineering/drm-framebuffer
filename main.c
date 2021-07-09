@@ -171,14 +171,15 @@ error:
 
 void fill_framebuffer_from_stdin(struct framebuffer *fb)
 {
-    memset(fb->data, 0, fb->dumb_framebuffer.size);
-
     size_t total_read = 0;
+
     while (total_read < fb->dumb_framebuffer.size)
         total_read += read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
 
     /* Make sure we synchronize the display with the buffer. This also works if page flips are enabled */
+    drmSetMaster(fb->fd);
     drmModeDirtyFB(fb->fd, fb->buffer_id, NULL, 0);
+    drmDropMaster(fb->fd);
 
     sigset_t wait_set;
     sigemptyset(&wait_set);

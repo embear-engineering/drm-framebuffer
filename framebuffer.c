@@ -83,7 +83,6 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         return -EINVAL;
     }
 
-
     /* Search the connector provided as argument */
     drmModeConnectorPtr connector = 0;
     for (int i = 0; i < res->count_connectors; i++) {
@@ -145,6 +144,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
+    /* Store the original crtc settings for cleanup */
     fb->orig_crtc = drmModeGetCrtc(fd, encoder->crtc_id);
     if (!fb->orig_crtc) {
         printf("Could not get original CRTC\n");
@@ -152,12 +152,14 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
+    /* We need the connector_id to restore the old crtc state */
+    fb->connector_id = connector->connector_id;
+
     err = drmModeSetCrtc(fd, encoder->crtc_id, fb->buffer_id, 0, 0, &connector->connector_id, 1, resolution);
     if (err) {
         printf("Could not set new framebuffer for CRTC (err=%d)\n", err);
         goto cleanup;
     }
-    fb->connector_id = connector->connector_id;
 
     struct drm_mode_map_dumb mreq;
 
@@ -170,9 +172,6 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
-    /* Make sure we are not master anymore, so that other processes can add new framebuffers as well */
-    drmDropMaster(fd);
-
     fb->res_x = resolution->hdisplay;
     fb->res_y = resolution->vdisplay;
 
@@ -182,6 +181,9 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         printf("Mode map failed (err=%d)\n", err);
         goto cleanup;
     }
+
+    /* Make sure we are not master anymore, so that other processes can add new framebuffers as well */
+    drmDropMaster(fd);
 
     fb->fd = fd;
 
