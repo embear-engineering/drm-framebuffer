@@ -82,7 +82,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         return -EINVAL;
     }
 
-    /* Get the resurces of the DRM device (connectors, encoders, etc.)*/
+    /* Get the resources of the DRM device (connectors, encoders, etc.)*/
     res = drmModeGetResources(fd);
     if (!res) {
         printf("Could not get drm resources\n");
@@ -171,7 +171,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
-    /* Make sure we are not master anymore, so that other processes can add new framebuffers as well */
+    /* Make sure we are not master anymore so that other processes can add new framebuffers as well */
     drmDropMaster(fd);
 
     fb->fd = fd;
@@ -179,7 +179,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
     fb->resolution = resolution;
 
 cleanup:
-    /* We don't need the encoder and connector anymore, so let's free them */
+    /* We don't need the encoder and connector anymore so let's free them */
     if (encoder)
         drmModeFreeEncoder(encoder);
 
