@@ -18,8 +18,9 @@ struct framebuffer {
     uint8_t *data;
     uint32_t size;
     struct drm_mode_create_dumb dumb_framebuffer;
-    drmModeCrtcPtr orig_crtc;
-    uint32_t connector_id;
+    drmModeCrtcPtr crtc;
+    drmModeConnectorPtr connector;
+    drmModeModeInfoPtr resolution;
 };
 
 void release_framebuffer(struct framebuffer *fb);

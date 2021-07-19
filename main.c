@@ -178,7 +178,8 @@ void fill_framebuffer_from_stdin(struct framebuffer *fb)
 
     /* Make sure we synchronize the display with the buffer. This also works if page flips are enabled */
     drmSetMaster(fb->fd);
-    drmModeDirtyFB(fb->fd, fb->buffer_id, NULL, 0);
+    drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, 0, 0, 0, NULL, 0, NULL);
+    drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, fb->buffer_id, 0, 0, &fb->connector->connector_id, 1, fb->resolution);
     drmDropMaster(fb->fd);
 
     sigset_t wait_set;

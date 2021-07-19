@@ -49,15 +49,21 @@ void release_framebuffer(struct framebuffer *fb)
     if (fb->fd) {
         /* Try to become master again, else we can't set CRTC. Then the current master needs to reset everything. */
         drmSetMaster(fb->fd);
-        if (fb->orig_crtc) {
-            drmModeSetCrtc(fb->fd, fb->orig_crtc->crtc_id, fb->orig_crtc->buffer_id, fb->orig_crtc->x,
-                    fb->orig_crtc->y, &fb->connector_id, 1, &fb->orig_crtc->mode);
-            drmModeFreeCrtc(fb->orig_crtc);
+        if (fb->crtc) {
+            /* Set back to orignal frame buffer */
+            drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, fb->crtc->buffer_id, 0, 0, &fb->connector->connector_id, 1, fb->resolution);
+            drmModeFreeCrtc(fb->crtc);
         }
         if (fb->buffer_id)
             drmModeFreeFB(drmModeGetFB(fb->fd, fb->buffer_id));
+        /* This will also release resolution */
+        if (fb->connector) {
+            drmModeFreeConnector(fb->connector);
+            fb->resolution = 0;
+        }
         if (fb->dumb_framebuffer.handle)
             ioctl(fb->fd, DRM_IOCTL_MODE_DESTROY_DUMB, fb->dumb_framebuffer);
+        close(fb->fd);
     }
 
 }
@@ -144,22 +150,8 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
-    /* Store the original crtc settings for cleanup */
-    fb->orig_crtc = drmModeGetCrtc(fd, encoder->crtc_id);
-    if (!fb->orig_crtc) {
-        printf("Could not get original CRTC\n");
-        err = -EINVAL;
-        goto cleanup;
-    }
-
-    /* We need the connector_id to restore the old crtc state */
-    fb->connector_id = connector->connector_id;
-
-    err = drmModeSetCrtc(fd, encoder->crtc_id, fb->buffer_id, 0, 0, &connector->connector_id, 1, resolution);
-    if (err) {
-        printf("Could not set new framebuffer for CRTC (err=%d)\n", err);
-        goto cleanup;
-    }
+    /* Get the crtc settings */
+    fb->crtc = drmModeGetCrtc(fd, encoder->crtc_id);
 
     struct drm_mode_map_dumb mreq;
 
@@ -172,9 +164,6 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         goto cleanup;
     }
 
-    fb->res_x = resolution->hdisplay;
-    fb->res_y = resolution->vdisplay;
-
     fb->data = mmap(0, fb->dumb_framebuffer.size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, mreq.offset);
     if (fb->data == MAP_FAILED) {
         err = errno;
@@ -186,13 +175,13 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
     drmDropMaster(fd);
 
     fb->fd = fd;
+    fb->connector = connector;
+    fb->resolution = resolution;
 
 cleanup:
     /* We don't need the encoder and connector anymore, so let's free them */
     if (encoder)
         drmModeFreeEncoder(encoder);
-    if (connector)
-        drmModeFreeConnector(connector);
 
     if (err)
         release_framebuffer(fb);

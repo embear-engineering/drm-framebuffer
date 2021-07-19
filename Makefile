@@ -15,9 +15,9 @@ install: all
 	install -d $(DESTDIR)$(bindir)
 	install -m 0755 $(PROGNAME) $(DESTDIR)$(bindir)
 
-clean: $(OBJ)
+clean:
 	@echo "Clean object files"
-	@rm -f $<
+	@rm -f $(OBJ)
 	@rm -f $(PROGNAME)
 
 %.o: %.c
