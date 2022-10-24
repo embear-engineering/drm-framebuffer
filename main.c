@@ -40,7 +40,7 @@ static void usage(void)
 }
 
 
-int list_resources(const char *dri_device)
+static int list_resources(const char *dri_device)
 {
     int fd;
     drmModeResPtr res;
@@ -104,7 +104,7 @@ int list_resources(const char *dri_device)
 
 }
 
-int get_resolution(const char *dri_device, const char *connector_name)
+static int get_resolution(const char *dri_device, const char *connector_name)
 {
     int err = 0;
     int fd;
