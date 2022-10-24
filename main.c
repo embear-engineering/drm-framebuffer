@@ -28,6 +28,8 @@
 
 #include "framebuffer.h"
 
+static int verbose = 0;
+
 static void usage(void)
 {
     printf ("\ndrm-framebuffer [OPTIONS...]\n\n"
@@ -36,9 +38,11 @@ static void usage(void)
             "  -l list connectors\n"
             "  -c connector to use (HDMI-A-1, LVDS-1)\n"
             "  -r get resolution dri device and connector needs to be set\n"
+            "  -v do more verbose printing\n"
             "  -h show this message\n\n");
 }
 
+#define print_verbose(...) if (verbose) printf(__VA_ARGS__)
 
 static int list_resources(const char *dri_device)
 {
@@ -173,6 +177,7 @@ void fill_framebuffer_from_stdin(struct framebuffer *fb)
 {
     size_t total_read = 0;
 
+    print_verbose("Loading image\n");
     while (total_read < fb->dumb_framebuffer.size)
         total_read += read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
 
@@ -181,6 +186,8 @@ void fill_framebuffer_from_stdin(struct framebuffer *fb)
     drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, 0, 0, 0, NULL, 0, NULL);
     drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, fb->buffer_id, 0, 0, &fb->connector->connector_id, 1, fb->resolution);
     drmDropMaster(fb->fd);
+
+    print_verbose("Sent image to framebuffer\n");
 
     sigset_t wait_set;
     sigemptyset(&wait_set);
@@ -201,7 +208,7 @@ int main(int argc, char** argv)
     int resolution = 0;
 
     opterr = 0;
-    while ((c = getopt (argc, argv, "d:c:lrh")) != -1) {
+    while ((c = getopt (argc, argv, "d:c:lrhv")) != -1) {
         switch (c)
         {
         case 'd':
@@ -219,6 +226,9 @@ int main(int argc, char** argv)
         case 'h':
             usage();
             return 1;
+        case 'v':
+            verbose = 1;
+            break;
         default:
             break;
         }
