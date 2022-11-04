@@ -142,6 +142,7 @@ static int get_resolution(const char *dri_device, const char *connector_name)
                 break;
 
         drmModeFreeConnector(connector);
+        connector = 0;
     }
 
     if (!connector) {
@@ -173,16 +174,29 @@ error:
 }
 
 
-void fill_framebuffer_from_stdin(struct framebuffer *fb)
+int fill_framebuffer_from_stdin(struct framebuffer *fb)
 {
     size_t total_read = 0;
+    int ret;
 
     print_verbose("Loading image\n");
     while (total_read < fb->dumb_framebuffer.size)
-        total_read += read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
+    {
+        size_t sz = read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
+        if(sz<=0)		/* stop when getting EOF */
+        {
+            break;
+        }
+        total_read += sz;
+    }
 
     /* Make sure we synchronize the display with the buffer. This also works if page flips are enabled */
-    drmSetMaster(fb->fd);
+    ret = drmSetMaster(fb->fd);
+    if(ret)
+    {
+        printf("Could not get master role for DRM.\n");
+        return ret;
+    }
     drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, 0, 0, 0, NULL, 0, NULL);
     drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, fb->buffer_id, 0, 0, &fb->connector->connector_id, 1, fb->resolution);
     drmDropMaster(fb->fd);
@@ -197,6 +211,8 @@ void fill_framebuffer_from_stdin(struct framebuffer *fb)
     int sig;
     sigprocmask(SIG_BLOCK, &wait_set, NULL );
     sigwait(&wait_set, &sig);
+
+    return 0;
 }
 
 int main(int argc, char** argv)
@@ -206,6 +222,7 @@ int main(int argc, char** argv)
     int c;
     int list = 0;
     int resolution = 0;
+    int ret;
 
     opterr = 0;
     while ((c = getopt (argc, argv, "d:c:lrhv")) != -1) {
@@ -255,11 +272,16 @@ int main(int argc, char** argv)
     }
 
     struct framebuffer fb;
+    ret = 1;
     if (get_framebuffer(dri_device, connector, &fb) == 0) {
-        fill_framebuffer_from_stdin(&fb);
+        if(!fill_framebuffer_from_stdin(&fb))
+        {
+            // successfully shown.
+            ret = 0;
+        }
+        release_framebuffer(&fb);
     }
-    release_framebuffer(&fb);
 
-    return 0;
+    return ret;
 }
 

@@ -1,5 +1,5 @@
 CC      ?= gcc
-CFLAGS  ?= -pedantic -Wall -I /usr/include/drm
+CFLAGS  ?= -O0 -ggdb -pedantic -Wall -I /usr/include/libdrm
 LDFLAGS ?= -ldrm
 
 OBJ = main.o framebuffer.o
