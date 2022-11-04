@@ -105,6 +105,7 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
                 break;
 
         drmModeFreeConnector(connector);
+        connector = 0;
     }
 
     if (!connector) {
@@ -115,9 +116,10 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
     /* Get the preferred resolution */
     drmModeModeInfoPtr resolution = 0;
     for (int i = 0; i < connector->count_modes; i++) {
-            resolution = &connector->modes[i];
-            if (resolution->type & DRM_MODE_TYPE_PREFERRED)
-                    break;
+            drmModeModeInfoPtr res = 0;
+            res = &connector->modes[i];
+            if (res->type & DRM_MODE_TYPE_PREFERRED)
+                    resolution = res;
     }
 
     if (!resolution) {
