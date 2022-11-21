@@ -272,6 +272,7 @@ int main(int argc, char** argv)
     }
 
     struct framebuffer fb;
+    memset(&fb, 0, sizeof(fb));
     ret = 1;
     if (get_framebuffer(dri_device, connector, &fb) == 0) {
         if(!fill_framebuffer_from_stdin(&fb))
