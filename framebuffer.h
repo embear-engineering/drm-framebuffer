@@ -24,7 +24,8 @@ struct framebuffer {
 };
 
 void release_framebuffer(struct framebuffer *fb);
-int get_framebuffer(const char *dri_device, const char *connector_name, struct framebuffer *fb);
+int get_framebuffer(const char *dri_device, const char *connector_name, struct framebuffer *fb,
+                    int selected_resolution);
 
 const char *connector_type_name(unsigned int type);
 

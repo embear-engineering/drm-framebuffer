@@ -39,6 +39,8 @@ static void usage(void)
             "  -c connector to use (HDMI-A-1, LVDS-1)\n"
             "  -r get resolution dri device and connector needs to be set\n"
             "  -v do more verbose printing\n"
+            "  -s select a resolution by number when outputting data to the display.\n"
+            "     A list of available resolutions can be displayed with -r.\n"
             "  -h show this message\n\n");
 }
 
@@ -195,6 +197,8 @@ int fill_framebuffer_from_stdin(struct framebuffer *fb)
     drmModeSetCrtc(fb->fd, fb->crtc->crtc_id, fb->buffer_id, 0, 0, &fb->connector->connector_id, 1, fb->resolution);
     drmDropMaster(fb->fd);
 
+    print_verbose("Set resolution: %ux%u@%u\n", fb->resolution->hdisplay, fb->resolution->vdisplay,
+                  fb->resolution->vrefresh);
     print_verbose("Sent image to framebuffer\n");
 
     sigset_t wait_set;
@@ -216,10 +220,11 @@ int main(int argc, char** argv)
     int c;
     int list = 0;
     int resolution = 0;
+    int selected_resolution = -1;
     int ret;
 
     opterr = 0;
-    while ((c = getopt (argc, argv, "d:c:lrhv")) != -1) {
+    while ((c = getopt (argc, argv, "d:c:s:lrhv")) != -1) {
         switch (c)
         {
         case 'd':
@@ -239,6 +244,9 @@ int main(int argc, char** argv)
             return 1;
         case 'v':
             verbose = 1;
+            break;
+        case 's':
+            selected_resolution = atoi(optarg);
             break;
         default:
             break;
@@ -268,7 +276,7 @@ int main(int argc, char** argv)
     struct framebuffer fb;
     memset(&fb, 0, sizeof(fb));
     ret = 1;
-    if (get_framebuffer(dri_device, connector, &fb) == 0) {
+    if (get_framebuffer(dri_device, connector, &fb, selected_resolution) == 0) {
         if(!fill_framebuffer_from_stdin(&fb)) {
             // successfully shown.
             ret = 0;

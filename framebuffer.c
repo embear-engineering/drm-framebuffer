@@ -68,7 +68,8 @@ void release_framebuffer(struct framebuffer *fb)
 
 }
 
-int get_framebuffer(const char *dri_device, const char *connector_name, struct framebuffer *fb)
+int get_framebuffer(const char *dri_device, const char *connector_name, struct framebuffer *fb,
+                    int selected_resolution)
 {
     int err;
     int fd;
@@ -113,19 +114,27 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
         return -EINVAL;
     }
 
-    /* Get the preferred resolution */
-    drmModeModeInfoPtr resolution = 0;
-    for (int i = 0; i < connector->count_modes; i++) {
-        drmModeModeInfoPtr res = 0;
-        res = &connector->modes[i];
-        if (res->type & DRM_MODE_TYPE_PREFERRED)
-            resolution = res;
+    if (connector->count_modes <= 0) {
+        printf("No modes found for connector %s\n", connector_name);
+        return -EINVAL;
     }
 
+    /* Get the resolution */
+    drmModeModeInfoPtr resolution = 0;
+    if (selected_resolution >= 0 && selected_resolution < connector->count_modes) {
+        resolution = &connector->modes[selected_resolution];
+    }
+    else {
+        for (int i = 0; i < connector->count_modes; i++) {
+            drmModeModeInfoPtr res = 0;
+            res = &connector->modes[i];
+            if (res->type & DRM_MODE_TYPE_PREFERRED)
+                resolution = res;
+        }
+    }
     if (!resolution) {
-        printf("Could not find preferred resolution\n");
-        err = -EINVAL;
-        goto cleanup;
+        printf("Could not find preferred resolution, use first possible resolution\n");
+        resolution = &connector->modes[0];
     }
 
     fb->dumb_framebuffer.height = resolution->vdisplay;
