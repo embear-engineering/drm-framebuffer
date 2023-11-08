@@ -72,7 +72,7 @@ drm-framebuffer -d /dev/dri/card0 -c DP-1 -r
 
 The -s option can be used to force a specific resolution from the list received with -r:
 ```
-dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c HDMI-A-1 -s 36
+dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c DP-1 -s 36
 ```
 This example sets the resolution to 640x480@60.
 
