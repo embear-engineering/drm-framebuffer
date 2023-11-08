@@ -49,7 +49,6 @@ static int list_resources(const char *dri_device)
     int fd;
     drmModeResPtr res;
 
-
     fd = open(dri_device, O_RDWR);
     if (fd < 0) {
         printf("Could not open dri device %s\n", dri_device);
@@ -73,7 +72,6 @@ static int list_resources(const char *dri_device)
             continue;
 
         printf("Name: %s-%u ", connector_type_name(connector->connector_type), connector->connector_type_id);
-
         printf("Encoder: %d ", connector->encoder_id);
 
         encoder = drmModeGetEncoder(fd, connector->encoder_id);
@@ -105,7 +103,6 @@ static int list_resources(const char *dri_device)
     drmModeFreeResources(res);
 
     return 0;
-
 }
 
 static int get_resolution(const char *dri_device, const char *connector_name)
@@ -136,10 +133,10 @@ static int get_resolution(const char *dri_device, const char *connector_name)
             continue;
 
         snprintf(name, sizeof(name), "%s-%u", connector_type_name(connector->connector_type),
-                connector->connector_type_id);
+                 connector->connector_type_id);
 
         if (strncmp(name, connector_name, sizeof(name)) == 0)
-                break;
+            break;
 
         drmModeFreeConnector(connector);
         connector = 0;
@@ -153,9 +150,9 @@ static int get_resolution(const char *dri_device, const char *connector_name)
     /* Get the preferred resolution */
     drmModeModeInfoPtr resolution = 0;
     for (int i = 0; i < connector->count_modes; i++) {
-            resolution = &connector->modes[i];
-            if (resolution->type & DRM_MODE_TYPE_PREFERRED)
-                    break;
+        resolution = &connector->modes[i];
+        if (resolution->type & DRM_MODE_TYPE_PREFERRED)
+            break;
     }
 
     if (!resolution) {
@@ -183,8 +180,8 @@ int fill_framebuffer_from_stdin(struct framebuffer *fb)
     while (total_read < fb->dumb_framebuffer.size)
     {
         size_t sz = read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
-        if(sz<=0)		/* stop when getting EOF */
-        {
+        /* stop when getting EOF */
+        if(sz<=0) {
             break;
         }
         total_read += sz;
@@ -275,8 +272,7 @@ int main(int argc, char** argv)
     memset(&fb, 0, sizeof(fb));
     ret = 1;
     if (get_framebuffer(dri_device, connector, &fb) == 0) {
-        if(!fill_framebuffer_from_stdin(&fb))
-        {
+        if(!fill_framebuffer_from_stdin(&fb)) {
             // successfully shown.
             ret = 0;
         }
@@ -285,4 +281,3 @@ int main(int argc, char** argv)
 
     return ret;
 }
-

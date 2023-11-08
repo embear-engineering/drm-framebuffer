@@ -99,10 +99,10 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
             continue;
 
         snprintf(name, sizeof(name), "%s-%u", connector_type_name(connector->connector_type),
-                connector->connector_type_id);
+                 connector->connector_type_id);
 
         if (strncmp(name, connector_name, sizeof(name)) == 0)
-                break;
+            break;
 
         drmModeFreeConnector(connector);
         connector = 0;
@@ -116,10 +116,10 @@ int get_framebuffer(const char *dri_device, const char *connector_name, struct f
     /* Get the preferred resolution */
     drmModeModeInfoPtr resolution = 0;
     for (int i = 0; i < connector->count_modes; i++) {
-            drmModeModeInfoPtr res = 0;
-            res = &connector->modes[i];
-            if (res->type & DRM_MODE_TYPE_PREFERRED)
-                    resolution = res;
+        drmModeModeInfoPtr res = 0;
+        res = &connector->modes[i];
+        if (res->type & DRM_MODE_TYPE_PREFERRED)
+            resolution = res;
     }
 
     if (!resolution) {
@@ -190,4 +190,3 @@ cleanup:
 
     return err;
 }
-
