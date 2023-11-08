@@ -151,19 +151,16 @@ static int get_resolution(const char *dri_device, const char *connector_name)
     drmModeModeInfoPtr resolution = 0;
     for (int i = 0; i < connector->count_modes; i++) {
         resolution = &connector->modes[i];
+        printf("#%d - %ux%u@%u", i, resolution->hdisplay, resolution->vdisplay, resolution->vrefresh);
+        printf(" (ht: %u hs: %u he: %u hskew: %u, vt: %u  vs: %u ve: %u vscan: %u, flags: 0x%X)",
+                resolution->htotal, resolution->hsync_start, resolution->hsync_end, resolution->hskew,
+                resolution->vtotal, resolution->vsync_start, resolution->vsync_end, resolution->vscan,
+                resolution->flags);
         if (resolution->type & DRM_MODE_TYPE_PREFERRED)
-            break;
+            printf(" - preferred");
+        printf("\n");
     }
 
-    if (!resolution) {
-        printf("Could not find preferred resolution\n");
-        err = -EINVAL;
-        goto error;
-    }
-
-    printf("%ux%u\n", resolution->hdisplay, resolution->vdisplay);
-
-error:
     drmModeFreeConnector(connector);
     drmModeFreeResources(res);
     close(fd);
