@@ -1,4 +1,5 @@
 # drm-framebuffer
+
 A simple drm framebuffer tool to test drm devices. It takes data from stdin and will put it to the display. 
 
 ## Usage:
@@ -76,10 +77,13 @@ dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c HDMI-A-1 -s 36
 This example sets the resolution to 640x480@60.
 
 ## Dependencies
+
 This tool requires libdrm to compile and work.
   
 ## Compile
+
 To compile the tool simply type "make" with a valid gcc set trough the environment variable CC. Also make sure the drm headers and libraries are available (LDFLAGS, CFLAGS).
 
 ## Install
+
 Copy the executable drm-framebuffer to your target and execute it.
