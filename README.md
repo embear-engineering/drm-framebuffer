@@ -87,3 +87,16 @@ To compile the tool simply type "make" with a valid gcc set trough the environme
 ## Install
 
 Copy the executable drm-framebuffer to your target and execute it.
+
+## CMake
+
+There's also an alternative CMake based build system. Requires pkg-config
+
+```bash
+# Configure the build
+cmake -B build . 
+# Build drm-framebuffer
+cmake --build build
+# Install drm-framebuffer to your default binary directory. Often /usr/bin
+cmake --build build -t install
+```
