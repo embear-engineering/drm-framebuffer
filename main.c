@@ -24,6 +24,8 @@
 
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/select.h>
+#include <sys/signalfd.h>
 
 
 #include "framebuffer.h"
@@ -170,26 +172,13 @@ static int get_resolution(const char *dri_device, const char *connector_name)
 }
 
 
-int fill_framebuffer_from_stdin(struct framebuffer *fb)
+static int display_framebuffer(struct framebuffer *fb)
 {
-    size_t total_read = 0;
     int ret;
-
-    print_verbose("Loading image\n");
-    while (total_read < fb->dumb_framebuffer.size)
-    {
-        size_t sz = read(STDIN_FILENO, &fb->data[total_read], fb->dumb_framebuffer.size - total_read);
-        /* stop when getting EOF */
-        if(sz<=0) {
-            break;
-        }
-        total_read += sz;
-    }
 
     /* Make sure we synchronize the display with the buffer. This also works if page flips are enabled */
     ret = drmSetMaster(fb->fd);
-    if(ret)
-    {
+    if (ret) {
         printf("Could not get master role for DRM.\n");
         return ret;
     }
@@ -201,15 +190,81 @@ int fill_framebuffer_from_stdin(struct framebuffer *fb)
                   fb->resolution->vrefresh);
     print_verbose("Sent image to framebuffer\n");
 
-    sigset_t wait_set;
-    sigemptyset(&wait_set);
-    sigaddset(&wait_set, SIGTERM);
-    sigaddset(&wait_set, SIGINT);
+    return 0;
+}
 
-    int sig;
-    sigprocmask(SIG_BLOCK, &wait_set, NULL );
-    sigwait(&wait_set, &sig);
+int fill_framebuffer_from_stdin(struct framebuffer *fb)
+{
+    sigset_t mask;
+    int sfd;
+    int stdin_eof = 0;
 
+    /* Block SIGINT and SIGTERM so we can handle them via signalfd */
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGINT);
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+        printf("Could not block signals\n");
+        return -1;
+    }
+
+    sfd = signalfd(-1, &mask, 0);
+    if (sfd == -1) {
+        printf("Could not create signal fd\n");
+        return -1;
+    }
+
+    while (1) {
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sfd, &read_fds);
+        if (!stdin_eof)
+            FD_SET(STDIN_FILENO, &read_fds);
+
+        int ret = select(sfd + 1, &read_fds, NULL, NULL, NULL);
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            break;
+        }
+
+        if (FD_ISSET(sfd, &read_fds)) {
+            /* Signal received, exit */
+            break;
+        }
+
+        if (!stdin_eof && FD_ISSET(STDIN_FILENO, &read_fds)) {
+            /* New data available on stdin: read a complete frame */
+            size_t total_read = 0;
+
+            print_verbose("Loading image\n");
+            while (total_read < fb->dumb_framebuffer.size) {
+                ssize_t sz = read(STDIN_FILENO, &fb->data[total_read],
+                                  fb->dumb_framebuffer.size - total_read);
+                if (sz < 0) {
+                    if (errno == EINTR)
+                        continue;
+                    stdin_eof = 1;
+                    break;
+                }
+                if (sz == 0) {
+                    /* EOF: no more frames will arrive */
+                    stdin_eof = 1;
+                    break;
+                }
+                total_read += sz;
+            }
+
+            if (total_read > 0) {
+                if (display_framebuffer(fb) != 0) {
+                    close(sfd);
+                    return -1;
+                }
+            }
+        }
+    }
+
+    close(sfd);
     return 0;
 }
 
