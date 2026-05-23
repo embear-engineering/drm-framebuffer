@@ -70,6 +70,17 @@ drm-framebuffer -d /dev/dri/card0 -c DP-1 -r
 #37 - 720x400@70 (ht: 900 hs: 738 he: 846 hskew: 0, vt: 449  vs: 412 ve: 414 vscan: 0, flags: 0x6)
 ```
 
+### Streaming multiple frames
+
+The tool reads frames continuously from stdin and displays each one as soon as a complete frame's worth of pixel data has been received. This makes it straightforward to animate the display or sequence images by concatenating raw framebuffer files:
+
+```bash
+# Show output1.fb, then after 5 seconds show output2.fb (display is 2880x1800)
+drm-framebuffer -d /dev/dri/card1 -c eDP-1 < <(cat output1.fb && sleep 5 && cat output2.fb)
+```
+
+Each `.fb` file must contain exactly `width × height × 4` bytes of packed BGRA pixel data matching the display's native resolution. The tool will display the first frame immediately upon receiving those bytes and then wait for subsequent frames, so there is no need for extra padding data between frames.
+
 The -s option can be used to force a specific resolution from the list received with -r:
 ```
 dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c DP-1 -s 36
