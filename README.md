@@ -81,6 +81,14 @@ drm-framebuffer -d /dev/dri/card1 -c eDP-1 < <(cat output1.fb && sleep 5 && cat 
 
 Each `.fb` file must contain exactly `width × height × 4` bytes of packed BGRA pixel data matching the display's native resolution. The tool will display the first frame immediately upon receiving those bytes and then wait for subsequent frames, so there is no need for extra padding data between frames.
 
+### Create an `.fb` file with ImageMagick
+
+You can convert an image to a raw BGRA framebuffer file with ImageMagick:
+
+```bash
+magick image.png -resize 1280x -background black -gravity center -extent 2880x1800 -depth 8 BGRA:output.fb
+```
+
 The -s option can be used to force a specific resolution from the list received with -r:
 ```
 dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c DP-1 -s 36
