@@ -1,0 +1,30 @@
+name: Release Static Multi-Arch Binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-static:
+    uses: ./.github/workflows/shared-static-multi-arch-build.yml
+
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: build-static
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.3
+        with:
+          path: dist
+          pattern: drm-framebuffer-*
+          merge-multiple: true
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/drm-framebuffer-*
