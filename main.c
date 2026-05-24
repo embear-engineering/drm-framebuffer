@@ -234,13 +234,28 @@ int fill_framebuffer_from_stdin(struct framebuffer *fb)
         }
 
         if (!stdin_eof && FD_ISSET(STDIN_FILENO, &read_fds)) {
-            /* New data available on stdin: read a complete frame */
+            /* New data available on stdin: read a complete frame.
+             *
+             * Users supply packed pixel data: width * height * (bpp/8) bytes.
+             * The dumb framebuffer may have a larger pitch (row stride) than
+             * width * bpp/8 due to hardware alignment requirements, so
+             * dumb_framebuffer.size >= image_size.  Reading
+             * dumb_framebuffer.size bytes would block until extra (padding)
+             * bytes arrive. Instead, read row_stride bytes per row and place
+             * each row at the correct pitched offset in fb->data.
+             */
+            size_t row_stride = (size_t)fb->dumb_framebuffer.width *
+                                fb->dumb_framebuffer.bpp / 8;
+            size_t image_size = row_stride * fb->dumb_framebuffer.height;
             size_t total_read = 0;
 
             print_verbose("Loading image\n");
-            while (total_read < fb->dumb_framebuffer.size) {
-                ssize_t sz = read(STDIN_FILENO, &fb->data[total_read],
-                                  fb->dumb_framebuffer.size - total_read);
+            while (total_read < image_size) {
+                size_t row = total_read / row_stride;
+                size_t col = total_read % row_stride;
+                ssize_t sz = read(STDIN_FILENO,
+                                  fb->data + row * fb->dumb_framebuffer.pitch + col,
+                                  row_stride - col);
                 if (sz < 0) {
                     if (errno == EINTR)
                         continue;
