@@ -1,0 +1,68 @@
+name: Shared Static Multi-Arch Build
+
+on:
+  workflow_call:
+
+jobs:
+  build-static:
+    name: Build (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: amd64
+            cc: gcc
+            extra_arch: ""
+            packages: "libdrm-dev"
+            lib_path: /usr/lib/x86_64-linux-gnu
+          - label: arm64
+            cc: aarch64-linux-gnu-gcc
+            extra_arch: arm64
+            packages: "gcc-aarch64-linux-gnu libc6-dev-arm64-cross libdrm-dev:arm64"
+            lib_path: /usr/lib/aarch64-linux-gnu
+          - label: arm
+            cc: arm-linux-gnueabihf-gcc
+            extra_arch: armhf
+            packages: "gcc-arm-linux-gnueabihf libc6-dev-armhf-cross libdrm-dev:armhf"
+            lib_path: /usr/lib/arm-linux-gnueabihf
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up build environment
+        run: |
+          set -euxo pipefail
+          if [ -n "${{ matrix.extra_arch }}" ]; then
+            sudo sed -i '/^Signed-By:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+            sudo sh -c "printf '%s\n' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-backports main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-security main universe' \
+              > /etc/apt/sources.list.d/ubuntu-ports-${{ matrix.extra_arch }}.list"
+            sudo dpkg --add-architecture ${{ matrix.extra_arch }}
+          fi
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential make pkg-config file \
+            ${{ matrix.packages }}
+
+      - name: Build static binary
+        run: |
+          set -euxo pipefail
+          make clean
+          make CC=${{ matrix.cc }} \
+               CFLAGS="-O2 -pipe -pedantic -Wall -I /usr/include/libdrm" \
+               LDFLAGS="-static -ldrm -L${{ matrix.lib_path }}"
+          file drm-framebuffer | tee file.out
+          grep -qi "statically linked" file.out
+          cp drm-framebuffer drm-framebuffer-${{ matrix.label }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: drm-framebuffer-${{ matrix.label }}
+          path: drm-framebuffer-${{ matrix.label }}
+          if-no-files-found: error
