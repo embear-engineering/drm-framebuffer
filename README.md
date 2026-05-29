@@ -14,6 +14,8 @@ The following would be the equivalent:
 dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c HDMI-A-1
 ```
 
+### Request information about the display configuration
+
 Additionally you can request information about the display configuration with the following two commands:
 ```bash
 # Available connectors, crtcs and encoders
@@ -70,6 +72,14 @@ drm-framebuffer -d /dev/dri/card0 -c DP-1 -r
 #37 - 720x400@70 (ht: 900 hs: 738 he: 846 hskew: 0, vt: 449  vs: 412 ve: 414 vscan: 0, flags: 0x6)
 ```
 
+### Forcing a resolution
+
+The -s option can be used to force a resolution from the list received with -r:
+```
+dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c DP-1 -s 36
+```
+This example sets the resolution to 640x480@60.
+
 ### Streaming multiple frames
 
 The tool reads frames continuously from stdin and displays each one as soon as a complete frame's worth of pixel data has been received. This makes it straightforward to animate the display or sequence images by concatenating raw framebuffer files:
@@ -88,12 +98,6 @@ You can convert an image to a raw BGRA framebuffer file with ImageMagick:
 ```bash
 magick image.png -resize 1280x -background black -gravity center -extent 2880x1800 -depth 8 BGRA:output.fb
 ```
-
-The -s option can be used to force a specific resolution from the list received with -r:
-```
-dd if=/dev/urandom | drm-framebuffer -d /dev/dri/card0 -c DP-1 -s 36
-```
-This example sets the resolution to 640x480@60.
 
 ## Dependencies
 
