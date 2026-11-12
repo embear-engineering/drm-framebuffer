@@ -48,6 +48,41 @@ static void usage(void)
 
 #define print_verbose(...) if (verbose) printf(__VA_ARGS__)
 
+/* The legacy drmModePlane struct does not carry the plane type. It is only
+ * exposed as a DRM property named "type", so read it from the plane's
+ * properties and return the driver-provided enum name. */
+static const char *get_plane_type_name(int fd, uint32_t plane_id)
+{
+    static char name[DRM_PROP_NAME_LEN];
+    drmModeObjectPropertiesPtr obj_props =
+        drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
+    if (!obj_props)
+        return "unknown";
+
+    name[0] = '\0';
+    for (uint32_t i = 0; i < obj_props->count_props; i++) {
+        drmModePropertyPtr prop = drmModeGetProperty(fd, obj_props->props[i]);
+        if (!prop)
+            continue;
+
+        uint64_t value = obj_props->prop_values[i];
+        if (strcmp(prop->name, "type") == 0) {
+            for (int e = 0; e < prop->count_enums; e++) {
+                if (prop->enums[e].value == value) {
+                    /* Copy out before the property is freed below. */
+                    snprintf(name, sizeof(name), "%s", prop->enums[e].name);
+                    break;
+                }
+            }
+        }
+
+        drmModeFreeProperty(prop);
+    }
+
+    drmModeFreeObjectProperties(obj_props);
+    return name[0] ? name : "unknown";
+}
+
 static int list_resources(const char *dri_device)
 {
     int fd;
@@ -58,6 +93,10 @@ static int list_resources(const char *dri_device)
         printf("Could not open dri device %s\n", dri_device);
         return -EINVAL;
     }
+
+    /* Without this the kernel only reports overlay planes; setting it also
+     * exposes the primary and cursor planes. */
+    drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 
     res = drmModeGetResources(fd);
     if (!res) {
@@ -102,7 +141,17 @@ static int list_resources(const char *dri_device)
     for (int i = 0; i < res->count_encoders; i++) {
         printf("%d ", res->encoders[i]);
     }
-    printf("\n");
+
+    drmModePlaneResPtr plane_res = drmModeGetPlaneResources(fd);
+    if (plane_res) {
+        printf("\nplanes: ");
+        for (uint32_t i = 0; i < plane_res->count_planes; i++) {
+            printf("%d (%s) ", plane_res->planes[i],
+                   get_plane_type_name(fd, plane_res->planes[i]));
+        }
+        printf("\n");
+        drmModeFreePlaneResources(plane_res);
+    }
 
     drmModeFreeResources(res);
 
