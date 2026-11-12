@@ -6,7 +6,7 @@ on:
 jobs:
   build-static:
     name: Build (${{ matrix.label }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -35,12 +35,13 @@ jobs:
         run: |
           set -euxo pipefail
           if [ -n "${{ matrix.extra_arch }}" ]; then
+            codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
             sudo sed -i '/^Signed-By:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
             sudo sh -c "printf '%s\n' \
-              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble main universe' \
-              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe' \
-              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-backports main universe' \
-              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports noble-security main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports ${codename} main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports ${codename}-updates main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports ${codename}-backports main universe' \
+              'deb [arch=${{ matrix.extra_arch }}] http://ports.ubuntu.com/ubuntu-ports ${codename}-security main universe' \
               > /etc/apt/sources.list.d/ubuntu-ports-${{ matrix.extra_arch }}.list"
             sudo dpkg --add-architecture ${{ matrix.extra_arch }}
           fi
